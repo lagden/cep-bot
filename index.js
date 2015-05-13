@@ -6,9 +6,9 @@ var lo = require('lodash');
 var async = require('async');
 var consulta = require('io-cep');
 
-var lg = function(d) {
+function lg(d) {
   process.stdout.write(d + '\n');
-};
+}
 
 function getCEP(n, callback) {
   var cep = lo.padLeft(n, 5, '0') + '-001';

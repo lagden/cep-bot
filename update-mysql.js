@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 'use strict';
 
 var consulta = require('io-cep');
@@ -7,14 +9,15 @@ var async = require('async');
 var moment = require('moment');
 var Table = require('cli-table');
 var ProgressBar = require('progress');
+var config = require('./mysql.json');
 
 var pool = mysql.createPool({
   connectionLimit: 1,
   waitForConnections: true,
-  host: '127.0.0.1',
-  user: 'root',
+  host: config.host,
+  user: config.user,
   password: '',
-  database: 'teleport'
+  database: config.db,
 });
 
 // Tempo de Execução
@@ -22,7 +25,7 @@ var timeStart;
 var timeEnd;
 
 var setBuild = 1;
-var offset = 100;
+var offset = 2;
 var total = setBuild * offset;
 var atualizado = 0;
 var falha = [];

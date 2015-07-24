@@ -1,0 +1,11 @@
+building file list ... done
+.travis.yml
+cepbr.sql
+ceps.log
+index.js
+package.json
+test.js
+update-mysql.js
+
+sent 70867146 bytes  received 174 bytes  504393.74 bytes/sec
+total size is 70857754  speedup is 1.00

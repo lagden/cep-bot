@@ -5,6 +5,8 @@ var mysql = require('mysql');
 var lo = require('lodash');
 var async = require('async');
 var moment = require('moment');
+var Table = require('cli-table');
+var ProgressBar = require('progress');
 
 var pool = mysql.createPool({
   connectionLimit: 1,
@@ -19,9 +21,19 @@ var pool = mysql.createPool({
 var timeStart;
 var timeEnd;
 
-var total = 0;
+var setBuild = 1;
+var offset = 100;
+var total = setBuild * offset;
 var atualizado = 0;
 var falha = [];
+
+// ProgressBar
+var bar = new ProgressBar(' consulta [:bar] :percent :etas', {
+  complete: '=',
+  incomplete: ' ',
+  width: 20,
+  total: total
+});
 
 function mapSeries(param, fn) {
   return new Promise(function(resolve, reject) {
@@ -34,16 +46,16 @@ function mapSeries(param, fn) {
   });
 }
 
-function parallel(param) {
-  return new Promise(function(resolve, reject) {
-    async.parallel(param, function(err, results) {
-      if (err) {
-        reject(err);
-      }
-      resolve(results);
-    });
-  });
-}
+// function parallel(param) {
+//   return new Promise(function(resolve, reject) {
+//     async.parallel(param, function(err, results) {
+//       if (err) {
+//         reject(err);
+//       }
+//       resolve(results);
+//     });
+//   });
+// }
 
 // Executa query
 function q(sql, param) {
@@ -67,11 +79,11 @@ function q(sql, param) {
 }
 
 // Monta query
-function build(total) {
+function build(t) {
   return new Promise(function(resolve, reject) {
-    var arr = lo.range(0, total);
+    var arr = lo.range(0, t);
     var sql = arr.map(function(num) {
-      return 'SELECT cep FROM cepbr LIMIT ' + (num * 100) + ', 100';
+      return 'SELECT cep FROM cepbr LIMIT ' + (num * 100) + ', ' + offset;
     });
     resolve(sql);
   });
@@ -87,9 +99,11 @@ function runAllQueries(res) {
 function getCEP(cep, callback) {
   consulta(cep)
     .then(function(res) {
+      bar.tick();
       callback(null, res);
     })
     .catch(function(err) {
+      bar.tick();
       callback(err, null);
     });
 }
@@ -101,13 +115,11 @@ function runAllCeps(res) {
       return a.concat(b);
     })
     .map(function(v) {
-      total++;
       // return function(callback) {
       //   getCEP(v.cep, callback);
       // };
       return v.cep;
     });
-
   // return parallel(ceps);
   return mapSeries(ceps, getCEP);
 }
@@ -135,7 +147,7 @@ function updateCeps(res) {
 
 // Vai...
 timeStart = Date.now();
-build(20)
+build(setBuild)
   .then(runAllQueries)
   .then(runAllCeps)
   .then(updateCeps)
@@ -146,26 +158,38 @@ build(20)
     var s = moment.duration(tempoExec).asSeconds();
     var i = moment.duration(tempoExec).minutes();
     var h = moment.duration(tempoExec).hours();
-    console.log('Total', total);
-    console.log('Atualizado', atualizado);
-    console.log('Falha', falha.length);
-    console.log('-------------------');
-    console.log('Tempo de execução:');
-    console.log('-------------------');
-    console.log('  Hora:', h);
-    console.log('  Minuto:', i);
-    console.log('  Segundo:', s);
+    var tableTotals = new Table({
+      head: ['Atualizado', 'Falha', 'Total']
+    });
+    tableTotals.push([atualizado, falha.length, total]);
+    var tableTime = new Table({
+      head: ['Hora', 'Minuto', 'Segundo']
+    });
+    tableTime.push([h, i, s]);
+    process.stdout.write('Status' + '\n');
+    process.stdout.write(tableTotals.toString() + '\n\n');
+    process.stdout.write('Tempo de execução' + '\n');
+    process.stdout.write(tableTime.toString() + '\n\n');
     if (falha.length > 0) {
-      console.log('-------------------');
-      console.log('CEP fail list');
-      console.log('-------------------');
-      falha.forEach(function(el) {
-        console.log(el);
+      var headsFull = Object.keys(falha[0]);
+      var heads = lo.remove(headsFull, function(n) {
+        return n !== 'success';
       });
+      var tableFail = new Table({
+        head: heads
+      });
+      falha.map(function(item) {
+        var row = heads.map(function(k) {
+          return item[k];
+        });
+        tableFail.push(row);
+      });
+      process.stdout.write('CEP fail list' + '\n');
+      process.stdout.write(tableFail.toString() + '\n');
     }
     process.exit();
   })
   .catch(function(err) {
-    console.log(err);
+    process.stdout.write(err + '\n');
     process.exit(1);
   });

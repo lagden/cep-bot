@@ -1,24 +1,15 @@
-Total 2000
-Atualizado 1996
-Falha 4
--------------------
-Tempo de execução:
--------------------
-  Hora: 0
-  Minuto: 7
-  Segundo: 424.636
--------------------
-CEP fail list
--------------------
-{ success: false,
-  message: 'CEP not found or parse error',
-  cep: '01139970' }
-{ success: false,
-  message: 'CEP not found or parse error',
-  cep: '01145000' }
-{ success: false,
-  message: 'CEP not found or parse error',
-  cep: '01145010' }
-{ success: false,
-  message: 'CEP not found or parse error',
-  cep: '01314970' }
+
+Status
+┌────────────┬───────┬───────┐
+│ Atualizado │ Falha │ Total │
+├────────────┼───────┼───────┤
+│ 100        │ 0     │ 100   │
+└────────────┴───────┴───────┘
+
+Tempo de execução
+┌──────┬────────┬─────────┐
+│ Hora │ Minuto │ Segundo │
+├──────┼────────┼─────────┤
+│ 0    │ 0      │ 21.374  │
+└──────┴────────┴─────────┘
+

@@ -1,0 +1,21 @@
+# Project files
+.svn*
+.git*
+.jsh*
+.bower*
+.edito*
+*.md
+*.sublime-*
+/rsync_exclude.*
+/bin
+/node_modules
+
+# SCM files
+.DS_Store
+thumbs.db
+.arch-params
+.bzr
+_darcs
+.hg
+.monotone
+CVS

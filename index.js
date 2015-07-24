@@ -12,13 +12,23 @@ function lg(d) {
 
 function getCEP(n, callback) {
   var cep = lo.padLeft(n, 5, '0') + '-001';
-  consulta(cep, callback);
+  consulta(cep)
+    .then(function(res) {
+      callback(null, res);
+    })
+    .catch(function(err) {
+      callback(err, null);
+    });
 }
 
 function getResult(el, idx, arr) {
   if (el.success) {
     lg(JSON.stringify(el)); // grava no db
   }
+}
+
+function bot(init, end) {
+  //... code
 }
 
 async.map(lo.range(4080, 4090), getCEP, function(err, results) {
@@ -29,3 +39,5 @@ async.map(lo.range(4080, 4090), getCEP, function(err, results) {
   results.forEach(getResult);
   process.exit();
 });
+
+module.exports = bot;

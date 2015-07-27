@@ -2,161 +2,100 @@
 
 'use strict';
 
+var util = require('util');
+var fs = require('fs');
+
+var Log = require('log');
 var consulta = require('io-cep');
-var mysql = require('mysql');
 var lo = require('lodash');
-var async = require('async');
 var moment = require('moment');
 var Table = require('cli-table');
-var ProgressBar = require('progress');
-var config = require('./mysql.json');
 
-var pool = mysql.createPool({
-  connectionLimit: 1,
-  waitForConnections: true,
-  host: config.host,
-  user: config.user,
-  password: '',
-  database: config.db,
-});
+var my = require('./lib/my');
+var utils = require('./lib/utils');
+var log = new Log('info', fs.createWriteStream('./run.log'));
 
-// Tempo de Execução
 var timeStart;
 var timeEnd;
 
-var setBuild = 1;
-var offset = 2;
-var total = setBuild * offset;
-var atualizado = 0;
+var bar;
+var total = 0;
 var falha = [];
-
-// ProgressBar
-var bar = new ProgressBar(' consulta [:bar] :percent :etas', {
-  complete: '=',
-  incomplete: ' ',
-  width: 20,
-  total: total
-});
-
-function mapSeries(param, fn) {
-  return new Promise(function(resolve, reject) {
-    async.mapSeries(param, fn, function(err, results) {
-      if (err) {
-        reject(err);
-      }
-      resolve(results);
-    });
-  });
-}
-
-// function parallel(param) {
-//   return new Promise(function(resolve, reject) {
-//     async.parallel(param, function(err, results) {
-//       if (err) {
-//         reject(err);
-//       }
-//       resolve(results);
-//     });
-//   });
-// }
-
-// Executa query
-function q(sql, param) {
-  param = param || null;
-  return new Promise(function(resolve, reject) {
-    pool.getConnection(function(errPool, conn) {
-      if (errPool) {
-        reject(errPool);
-      } else {
-        conn.query(sql, param, function(err, rows, fields) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(rows, fields);
-            conn.release();
-          }
-        });
-      }
-    });
-  });
-}
-
-// Monta query
-function build(t) {
-  return new Promise(function(resolve, reject) {
-    var arr = lo.range(0, t);
-    var sql = arr.map(function(num) {
-      return 'SELECT cep FROM cepbr LIMIT ' + (num * 100) + ', ' + offset;
-    });
-    resolve(sql);
-  });
-}
-
-// Executa todas as queries
-function runAllQueries(res) {
-  return Promise.all(res.map(function(sql) {
-    return q(sql);
-  }));
-}
 
 function getCEP(cep, callback) {
   consulta(cep)
     .then(function(res) {
+      var m = (res.success) ? 'info' : 'warning';
+      log[m](cep);
       bar.tick();
       callback(null, res);
     })
     .catch(function(err) {
+      log.warning('fake result:' + cep);
+      log.warning(err);
       bar.tick();
-      callback(err, null);
+      callback(null, {success: false});
     });
+}
+
+function cep(v) {
+  return v.cep;
 }
 
 // Executa todos os ceps
 function runAllCeps(res) {
-  var ceps = res
-    .reduce(function(a, b) {
-      return a.concat(b);
-    })
-    .map(function(v) {
-      // return function(callback) {
-      //   getCEP(v.cep, callback);
-      // };
-      return v.cep;
-    });
-  // return parallel(ceps);
-  return mapSeries(ceps, getCEP);
+  log.info('>>>>> Iniciado a consulta de CEPs');
+  var ceps;
+  if (res.length > 0 && util.isArray(res[0])) {
+    ceps = utils.reduce(res).map(cep);
+  } else {
+    ceps = res.map(cep);
+  }
+  total = ceps.length;
+  bar = utils.barra('consulta', total);
+  return utils.series(ceps, getCEP);
 }
 
-// Executa todas as queries
-function updateCeps(res) {
-  return Promise.all(res.map(function(dado) {
-    if (dado.success && dado.hasOwnProperty('logradouro')) {
-      return q(
-        'UPDATE ?? SET ? WHERE ?', [
-          'cepbr',
-          {
-            endereco: dado.logradouro
-          },
-          {
-            cep: dado.cep
-          }
-        ]);
-    } else {
+// Atualiza o banco
+function updateCEP(dado, callback) {
+  if (dado.success && dado.hasOwnProperty('logradouro')) {
+    my.q('UPDATE ?? SET ? WHERE ?', [
+      'cepbr',
+      {endereco: dado.logradouro},
+      {cep: dado.cep}
+    ]).then(function(res) {
+      log.info(dado.cep);
+      callback(null, res);
+    })
+    .catch(function(err) {
+      log.warning('falha na atualização do cep:' + dado.cep);
+      log.warning(err);
+      dado.message = 'Falha no update';
       falha.push(dado);
-      Promise.resolve();
-    }
-  }));
+      callback(null, {affectedRows: 0});
+    });
+  } else {
+    falha.push(dado);
+    callback(null, {affectedRows: 0});
+  }
+}
+
+// Executa todas as atualizações
+function updateCeps(res) {
+  log.info('>>>>> Atualizando a tabela de CEPs');
+  return utils.series(res, updateCEP);
 }
 
 // Vai...
 timeStart = Date.now();
-build(setBuild)
-  .then(runAllQueries)
+my.q('SELECT cep FROM teleport.cepbr WHERE ? LIMIT 20', {
+  uf: 'DF'
+})
   .then(runAllCeps)
   .then(updateCeps)
   .then(function(results) {
     timeEnd = Date.now();
-    atualizado = lo.sum(results, 'affectedRows');
+    var atualizado = lo.sum(results, 'affectedRows');
     var tempoExec = (timeEnd - timeStart);
     var s = moment.duration(tempoExec).asSeconds();
     var i = moment.duration(tempoExec).minutes();

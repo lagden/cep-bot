@@ -82,12 +82,12 @@ function fail(err) {
 program
   .version('0.0.1')
   .description('Bot CEP')
-  .option('-q, --query <type>', 'Write your own query')
+  .option('-q, --query <type>', 'Faça sua própria query')
   .parse(process.argv);
 
 let q = program.query ? program.query : false;
 if(q) {
-  run(q) // SELECT cep from cepbr WHERE uf='DF' LIMIT 2
+  run(q)
     .then(results)
     .catch(fail);
 } else {

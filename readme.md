@@ -16,6 +16,8 @@ npm i
 npm start "SELECT cep from cepbr WHERE uf='DF' LIMIT 5" > geral.log
 ```
 
+You can track progress using `tail -f consulta.log`
+
 
 ## License
 

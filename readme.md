@@ -1,19 +1,19 @@
-# cep-robot
+# CEP Bot
 
-> Fills automatically a database with the zip code information
+> Fills automatically a mysql database with the zip code information
 
 
 ## Install
 
 ```
-$ npm i -d
+npm i
 ```
 
 
 ## Usage
 
 ```
-$ npm start
+npm start "SELECT cep from cepbr WHERE uf='DF' LIMIT 5" > geral.log
 ```
 
 

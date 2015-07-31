@@ -1,0 +1,25 @@
+# Project files
+.svn*
+.git*
+.jsh*
+.bower*
+.edito*
+*.md
+*.sublime-*
+*.log
+*.sql
+rsync_exclude*
+/bin
+/node_modules
+/config-mysql.json
+/.atirax
+
+# SCM files
+.DS_Store
+thumbs.db
+.arch-params
+.bzr
+_darcs
+.hg
+.monotone
+CVS

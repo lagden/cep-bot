@@ -8,5 +8,6 @@
   "noarg": true,
   "undef": true,
   "unused": "vars",
+  "quotmark": true,
   "strict": true
 }

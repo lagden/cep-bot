@@ -10,7 +10,7 @@ CURR_FOLDER=`pwd`
 cd $CURR_FOLDER
 
 # Sync
-rsync $CURR_FOLDER/. tex@200.98.233.178:/home/tex/lab/cep-bot --rsh ssh --recursive --delete --exclude-from $CURR_FOLDER/rsync_exclude.txt --verbose > rsync_exclude.log
+rsync $CURR_FOLDER/. tex@200.98.233.178:/home/tex/lab/cep-bot --rsh ssh --recursive --delete --exclude-from $CURR_FOLDER/rsync_exclude --verbose > rsync_exclude.log
 
 ssh -T tex@200.98.233.178 <<EOF
 
